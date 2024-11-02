@@ -19,7 +19,7 @@ public class Parser {
         identifiers = new HashSet<String>();
         if (isIdentifier) {
             identifiers.add(currentToken);
-        }else  {
+        } else {
             reservedWords.add(currentToken);
         }
     }
@@ -35,23 +35,27 @@ public class Parser {
 
     private void d() throws Exception {
         if (isIdentifier) {
-            try {
-                match(currentToken);
-                if (currentToken.equals("=")) {
-                    currentToken = lexer.goBack();
-                    isIdentifier = lexer.isIdentifier();
-                    return;
-                }
-                match("int");
-                match(";");
-                d();
-            } catch (Exception e) {
-                    match("String");
-                    match(";");
-                    d();
-                } 
+            match(currentToken);
+            if (currentToken == null) {
+                throw new RuntimeException("Fin de archivo inesperado");
             }
-         else {
+            if (currentToken.equals("=")) {
+                currentToken = lexer.goBack();
+                isIdentifier = lexer.isIdentifier();
+                return;
+            }
+            try {
+                match("int");
+            } catch (Exception e) {
+                match("String");
+            }
+            try {
+                match(";");
+            } catch (Exception e) {
+                throw new RuntimeException("Se esperaba ; después de la declaración de la variable " + e.getMessage());
+            }
+            d();
+        } else {
             return;
         }
     }
@@ -60,35 +64,51 @@ public class Parser {
         if (currentToken.equals("while")) {
             match("while");
             e();
-            match("do");
+            try {
+                match("do");
+            } catch (Exception e) {
+                throw new RuntimeException("Se esperaba la palabra clave do después de while " + e.getMessage());
+            }
             s();
         } else if (currentToken.equals("print")) {
             match("print");
             e();
         } else if (isIdentifier) {
             match(currentToken);
-            match("=");
+            try {
+                match("=");
+            } catch (Exception e) {
+                throw new RuntimeException("Se esperaba el operador = después del identificador " + e.getMessage());
+            }
             e();
         } else {
-            throw new RuntimeException("Error de sintaxis" + currentToken);
+            throw new RuntimeException("Se esperaba una palabra clave como while o print " + currentToken);
         }
     }
 
     private void e() throws Exception {
         if (isIdentifier) {
-            match(currentToken);
-            if (currentToken.equals("+")) {
-                match("+");
-                if (!isIdentifier) {
-                    throw new RuntimeException("Se espera un identificadro después de token +" + currentToken);
-                }
-                match(currentToken); 
+            try {
+                match(currentToken);
+            } catch (Exception e) {
+                throw new RuntimeException("Se esperaba un identificador" + e.getMessage());
             }
+            try {
+                match("+");
+            } catch (Exception e) {
+                return;
+            }
+            if (!isIdentifier) {
+                throw new RuntimeException("Se espera un identificador después de token + " + currentToken);
+            }
+            match(currentToken);
+        } else {
+            throw new RuntimeException("Se esperaba un identificador " + currentToken);
         }
     }
 
     private void match(String expectedToken) throws Exception {
-        if(currentToken == null) {
+        if (currentToken == null) {
             throw new RuntimeException("Fin de archivo inesperado");
         }
         if (currentToken.equals(expectedToken)) {
@@ -97,21 +117,24 @@ public class Parser {
             boolean isReservedWord = lexer.isReservedWord();
             if (isIdentifier) {
                 identifiers.add(currentToken);
-            }else  if(isReservedWord){
+            } else if (isReservedWord) {
                 reservedWords.add(currentToken);
-            }else{
+            } else {
                 operators.add(currentToken);
             }
         } else {
             throw new RuntimeException("Error de sintaxis en el token: " + currentToken);
         }
     }
+
     public HashSet<String> getIdentifiers() {
         return identifiers;
     }
+
     public HashSet<String> getReservedWords() {
         return reservedWords;
     }
+
     public HashSet<String> getOperators() {
         return operators;
     }
